@@ -80,9 +80,17 @@ pipeline {
         }
     }
 
+post {
+    always {
+        dir("${TF_HOME}") {
+            // Видаляємо ресурси після кожного прогону (для економії місця)
+            sh 'terraform destroy -auto-approve'
+        }
+        echo 'Пайплайн завершено.'
+    }
+}
     post {
         always {
-            // Блок post для завершальних дій або збереження стану [cite: 60]
             echo 'Пайплайн завершено.'
         }
         failure {
@@ -90,3 +98,4 @@ pipeline {
         }
     }
 }
+
