@@ -83,13 +83,9 @@ pipeline {
     post {
         always {
             dir("${TF_HOME}") {
-                 sh 'terraform destroy -auto-approve'
-        }
-            echo 'Пайплайн завершено.'
-        }
-    }
-    post {
-        always {
+                // Автоматичне видалення ресурсів для економії (згідно з п. 6.4) 
+                sh 'terraform destroy -auto-approve'
+            }
             echo 'Пайплайн завершено.'
         }
         failure {
@@ -97,4 +93,3 @@ pipeline {
         }
     }
 }
-
