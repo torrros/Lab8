@@ -71,10 +71,9 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     script {
-                        // Перевірка доступності веб-інтерфейсів [cite: 37]
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
-
+                        sh "sleep 60"
                         sh "curl -s --head http://${appIp}:80 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:9090 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:3000 | grep '200 OK'"
@@ -85,17 +84,12 @@ pipeline {
     }
 
     post {
-        always {
+        failure {
             dir("${TF_HOME}") {
-                // Стійкість та очищення ресурсів 
                 withCredentials([string(credentialsId: 'vm-pub-key', variable: 'PUBLIC_KEY')]) {
                     sh "terraform destroy -auto-approve -var='ssh_public_key=${PUBLIC_KEY}'"
                 }
             }
-            echo 'Пайплайн завершено.'
-        }
-        failure {
-            echo 'Розгортання не вдалося. Перевірте конфігурацію IaC або сценарії Ansible.'
         }
     }
 }
