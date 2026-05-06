@@ -83,8 +83,14 @@ pipeline {
     post {
         always {
             dir("${TF_HOME}") {
-                // Автоматичне видалення ресурсів для економії (згідно з п. 6.4) 
-                sh 'terraform destroy -auto-approve'
+                script {
+                    if (fileExists("id_rsa.pub")) {
+                        def pubKey = readFile("id_rsa.pub").trim()
+                        sh "terraform destroy -auto-approve -var='ssh_public_key=${pubKey}'"
+                    } else {
+                        sh 'terraform destroy -auto-approve -var="ssh_public_key=dummy"' 
+                    }
+                }
             }
             echo 'Пайплайн завершено.'
         }
@@ -92,4 +98,3 @@ pipeline {
             echo 'Розгортання не вдалося. Перевірте конфігурацію IaC або сценарії Ansible.'
         }
     }
-}
