@@ -29,7 +29,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     // Перевірка наявності згенерованого inventory.ini [cite: 25, 35]
-                    sh "ls -l ${ANSIBLE_HOME}/inventory.ini
+                    sh "ls -l ${ANSIBLE_HOME}/inventory.ini"
                 }
             }
         }
