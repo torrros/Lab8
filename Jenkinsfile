@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('1. Checkout') {
             steps {
-                checkout scm
+                checkout scm // [cite: 33]
             }
         }
 
@@ -17,7 +17,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
-                    // Використовуємо vm-pub-key для передачі публічного ключа в Terraform
+                    // Використовуємо vm-pub-key для передачі в Terraform [cite: 34]
                     withCredentials([string(credentialsId: 'vm-pub-key', variable: 'PUBLIC_KEY')]) {
                         sh "terraform apply -auto-approve -var='ssh_public_key=${PUBLIC_KEY}'"
                     }
@@ -27,27 +27,41 @@ pipeline {
 
         stage('3. Dynamic Inventory') {
             steps {
+                // Перевірка генерації inventory.ini [cite: 35]
                 sh "ls -l ${ANSIBLE_HOME}/inventory.ini"
             }
         }
 
-        stage('4. Configuration & Deployment') {
+        stage('4. Wait for SSH') {
             steps {
-                // Використовуємо lab7 для автентифікації Ansible через SSH Agent 
                 sshagent(['lab7']) {
                     dir("${TF_HOME}") {
-                        // Очікування SS
+                        // Очікування доступності вузлів перед конфігурацією 
                         sh "ansible all -i ${ANSIBLE_HOME}/inventory.ini -m wait_for_connection -a 'timeout=300'"
-                        
-                        // Паралельне розгортання
-                        parallel(
-                            "App Node": {
+                    }
+                }
+            }
+        }
+
+        stage('5. Ansible Deployment') {
+            // Паралельний запуск конфігурації обох серверів 
+            parallel {
+                stage('Configure App Node') {
+                    steps {
+                        sshagent(['lab7']) {
+                            dir("${TF_HOME}") {
                                 sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
-                            },
-                            "Monitor Node": {
+                            }
+                        }
+                    }
+                }
+                stage('Configure Monitor Node') {
+                    steps {
+                        sshagent(['lab7']) {
+                            dir("${TF_HOME}") {
                                 sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_monitor.yml"
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -57,6 +71,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     script {
+                        // Перевірка доступності веб-інтерфейсів [cite: 37]
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
 
@@ -72,11 +87,15 @@ pipeline {
     post {
         always {
             dir("${TF_HOME}") {
+                // Стійкість та очищення ресурсів 
                 withCredentials([string(credentialsId: 'vm-pub-key', variable: 'PUBLIC_KEY')]) {
                     sh "terraform destroy -auto-approve -var='ssh_public_key=${PUBLIC_KEY}'"
                 }
             }
             echo 'Пайплайн завершено.'
+        }
+        failure {
+            echo 'Розгортання не вдалося. Перевірте конфігурацію IaC або сценарії Ansible.'
         }
     }
 }
