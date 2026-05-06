@@ -18,12 +18,13 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
-                    // Створення інфраструктури (автоматизація без втручання) [cite: 34, 56]
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
-
+		    script {
+			def pubKey = sh(script: "cat /home/toros/.ssh/id_rsa.pub", returnStdout: true).trim()
+			sh "terraform apply -auto-approve -var='ssh_public_key=${pubKey}'"
+		    }
+		}
+	    }
+	}		
         stage('3. Dynamic Inventory') {
             steps {
                 dir("${TF_HOME}") {

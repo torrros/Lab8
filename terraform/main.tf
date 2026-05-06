@@ -7,6 +7,11 @@ terraform {
   }
 }
 
+variable "ssh_public_key" {
+  type        = string
+  description = "Вміст публічного SSH ключа"
+}
+
 provider "libvirt" {
   uri = "qemu:///system"
 }
@@ -51,7 +56,7 @@ users:
     shell: /bin/bash
     lock_passwd: false
     ssh_authorized_keys:
-      - "${file("/home/toros/.ssh/id_rsa.pub")}"
+      - "${var.ssh_public_key}"
 
 chpasswd:
   list: |
