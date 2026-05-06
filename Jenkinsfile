@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('1. Checkout') {
             steps {
-                // Клонування репозиторію [cite: 33]
+                // Клонування репозиторію з кодом [cite: 33]
                 checkout scm
             }
         }
@@ -18,7 +18,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
-                    // Створення інфраструктури без ручного втручання [cite: 34, 56]
+                    // Створення інфраструктури (автоматизація без втручання) [cite: 34, 56]
                     sh 'terraform apply -auto-approve'
                 }
             }
@@ -27,40 +27,49 @@ pipeline {
         stage('3. Dynamic Inventory') {
             steps {
                 dir("${TF_HOME}") {
-                    // Перевірка генерації inventory.ini [cite: 25, 35]
-                    sh 'ls -l ../ansible/inventory.ini'
+                    // Перевірка наявності згенерованого inventory.ini [cite: 25, 35]
+                    sh 'ls -l inventory.ini'
                 }
             }
         }
 
-        stage('4. Ansible Deployment') {
+        stage('4. Wait for SSH') {
             steps {
-                dir("${ANSIBLE_HOME}") {
-                    // КРИТИЧНО: Очікування SSH перед конфігурацією 
+                dir("${TF_HOME}") {
+                    // Обов'язкове очікування доступності ВМ перед конфігурацією 
                     sh 'ansible all -i inventory.ini -m wait_for_connection -a "timeout=300"'
-                    
-                    // Паралельний запуск конфігурації обох вузлів 
-                    parallel(
-                        "App Node": {
-                            sh 'ansible-playbook -i inventory.ini playbook_app.yml'
-                        },
-                        "Monitor Node": {
-                            sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
-                        }
-                    )
                 }
             }
         }
 
-        stage('5. Smoke Test') {
+        stage('5. Ansible Deployment') {
+            // Паралельний запуск конфігурації обох серверів 
+            parallel {
+                stage('Configure App Node') {
+                    steps {
+                        dir("${TF_HOME}") {
+                            sh "ansible-playbook -i inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
+                        }
+                    }
+                }
+                stage('Configure Monitor Node') {
+                    steps {
+                        dir("${TF_HOME}") {
+                            sh "ansible-playbook -i inventory.ini ${ANSIBLE_HOME}/playbook_monitor.yml"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('6. Smoke Test') {
             steps {
                 dir("${TF_HOME}") {
                     script {
-                        // Отримання IP через outputs для перевірки доступності [cite: 25, 37]
+                        // Перевірка доступності веб-інтерфейсів через curl [cite: 37]
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
 
-                        // Перевірка веб-інтерфейсів (порт 80, 9090, 3000) [cite: 23, 24, 37]
                         sh "curl -s --head http://${appIp}:80 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:9090 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:3000 | grep '200 OK'"
@@ -72,10 +81,11 @@ pipeline {
 
     post {
         always {
+            // Блок post для завершальних дій або збереження стану [cite: 60]
             echo 'Пайплайн завершено.'
         }
         failure {
-            echo 'Помилка розгортання. Перевірте логі Terraform або Ansible.'
+            echo 'Розгортання не вдалося. Перевірте конфігурацію IaC або сценарії Ansible.'
         }
     }
 }
