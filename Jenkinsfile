@@ -42,7 +42,7 @@ pipeline {
                         sh 'ansible-playbook -i ansible/inventory.ini ansible/playbook_app.yml'
                     }
 		}
-                stage ('Monitor Node'} {
+                stage ('Monitor Node') {
 		    steps {	
                         sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
                     }
