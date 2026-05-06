@@ -19,7 +19,7 @@ pipeline {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
 		    script {
-			def pubKey = sh(script: "cat /home/toros/.ssh/id_rsa.pub", returnStdout: true).trim()
+			def pubKey = readFile("id_rsa.pub").trim()
 			sh "terraform apply -auto-approve -var='ssh_public_key=${pubKey}'"
 		    }
 		}
