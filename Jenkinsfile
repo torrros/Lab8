@@ -29,7 +29,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     // Перевірка наявності згенерованого inventory.ini [cite: 25, 35]
-                    sh 'ls -l inventory.ini'
+                    sh "ls -l ${ANSIBLE_HOME}/inventory.ini
                 }
             }
         }
@@ -37,8 +37,7 @@ pipeline {
         stage('4. Wait for SSH') {
             steps {
                 dir("${TF_HOME}") {
-                    // Обов'язкове очікування доступності ВМ перед конфігурацією 
-                    sh 'ansible all -i inventory.ini -m wait_for_connection -a "timeout=300"'
+                    sh "ansible all -i ${ANSIBLE_HOME}/inventory.ini -m wait_for_connection -a 'timeout=300'"
                 }
             }
         }
@@ -49,7 +48,7 @@ pipeline {
                 stage('Configure App Node') {
                     steps {
                         dir("${TF_HOME}") {
-                            sh "ansible-playbook -i inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
+                            sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
                         }
                     }
                 }
