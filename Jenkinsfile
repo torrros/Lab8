@@ -47,8 +47,8 @@ pipeline {
                         sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
                     }
                 )
-             }
-         }
+            }
+        }
 
         stage('5. Smoke Test') {
             steps {
