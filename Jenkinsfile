@@ -80,15 +80,14 @@ pipeline {
         }
     }
 
-post {
-    always {
-        dir("${TF_HOME}") {
-            // Видаляємо ресурси після кожного прогону (для економії місця)
-            sh 'terraform destroy -auto-approve'
+    post {
+        always {
+            dir("${TF_HOME}") {
+                 sh 'terraform destroy -auto-approve'
         }
-        echo 'Пайплайн завершено.'
+            echo 'Пайплайн завершено.'
+        }
     }
-}
     post {
         always {
             echo 'Пайплайн завершено.'
