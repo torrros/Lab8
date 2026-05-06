@@ -1,0 +1,36 @@
+---
+- name: Configure Monitor Node
+  hosts: monitor_node
+  become: yes
+  roles:
+    - docker
+  tasks:
+    - name: Create Prometheus config directory
+      file:
+        path: /etc/prometheus
+        state: directory
+
+    - name: Setup Prometheus Configuration
+      template:
+        src: templates/prometheus.yml
+        dest: /etc/prometheus/prometheus.yml
+
+    - name: Deploy Prometheus
+      docker_container:
+        name: prometheus
+        image: prom/prometheus:latest
+        state: started
+        restart_policy: always
+        volumes:
+          - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        ports:
+          - "9090:9090"
+
+    - name: Deploy Grafana
+      docker_container:
+        name: grafana
+        image: grafana/grafana:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "3000:3000"

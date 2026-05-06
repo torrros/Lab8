@@ -156,12 +156,16 @@ data "libvirt_domain_interface_addresses" "app_server_ip" {
 # Генерація файлу inventory.ini для Ansible
 resource "local_file" "ansible_inventory" {
   content = <<-EOT
-    [web_servers]
-    %{ for i in range(2) ~}
-    ${data.libvirt_domain_interface_addresses.app_server_ip[i].interfaces[0].addrs[0].addr} ansible_user=toros
-    %{ endfor ~}
+    [app_node]
+    ${data.libvirt_domain_interface_addresses.app_server_ip[0].interfaces[0].addrs[0].addr} ansible_user=toros
+
+    [monitor_node]
+    ${data.libvirt_domain_interface_addresses.app_server_ip[1].interfaces[0].addrs[0].addr} ansible_user=toros
+
+    [all:vars]
+    ansible_ssh_common_args='-o StrictHostKeyChecking=no'
   EOT
-  filename = "inventory.ini"
+  filename = "../ansible/inventory.ini"
 }
 
 output "vm_ips" {

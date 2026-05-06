@@ -1,0 +1,24 @@
+---
+- name: Configure App Node
+  hosts: app_node
+  become: yes
+  roles:
+    - docker
+  tasks:
+    - name: Deploy Business Logic Container
+      docker_container:
+        name: business-app
+        image: "torrros/lab2:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+
+    - name: Deploy Node Exporter
+      docker_container:
+        name: node-exporter
+        image: prom/node-exporter:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "9100:9100"
