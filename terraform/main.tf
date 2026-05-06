@@ -175,3 +175,11 @@ resource "local_file" "ansible_inventory" {
 output "vm_ips" {
   value = data.libvirt_domain_interface_addresses.app_server_ip[*].interfaces[0].addrs[0].addr
 }
+
+output "app_node_ip" {
+  value = data.libvirt_domain_interface_addresses.app_server_ip[0].interfaces[0].addrs[0].addr
+}
+
+output "monitor_node_ip" {
+  value = data.libvirt_domain_interface_addresses.app_server_ip[1].interfaces[0].addrs[0].addr
+}
