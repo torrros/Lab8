@@ -163,7 +163,6 @@ resource "local_file" "ansible_inventory" {
   content = <<-EOT
     [app_node]
     ${data.libvirt_domain_interface_addresses.app_server_ip[0].interfaces[0].addrs[0].addr} ansible_user=toros
-
     [monitor_node]
     ${data.libvirt_domain_interface_addresses.app_server_ip[1].interfaces[0].addrs[0].addr} ansible_user=toros
 

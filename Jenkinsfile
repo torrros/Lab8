@@ -9,7 +9,6 @@ pipeline {
     stages {
         stage('1. Checkout') {
             steps {
-                // Клонування репозиторію з кодом [cite: 33]
                 checkout scm
             }
         }
@@ -18,45 +17,37 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
-		    script {
-			def pubKey = readFile("id_rsa.pub").trim()
-			sh "terraform apply -auto-approve -var='ssh_public_key=${pubKey}'"
-		    }
-		}
-	    }
-	}		
-        stage('3. Dynamic Inventory') {
-            steps {
-                dir("${TF_HOME}") {
-                    // Перевірка наявності згенерованого inventory.ini [cite: 25, 35]
-                    sh "ls -l ${ANSIBLE_HOME}/inventory.ini"
-                }
-            }
-        }
-
-        stage('4. Wait for SSH') {
-            steps {
-                dir("${TF_HOME}") {
-                    sh "ansible all -i ${ANSIBLE_HOME}/inventory.ini -m wait_for_connection -a 'timeout=300'"
-                }
-            }
-        }
-
-        stage('5. Ansible Deployment') {
-            // Паралельний запуск конфігурації обох серверів 
-            parallel {
-                stage('Configure App Node') {
-                    steps {
-                        dir("${TF_HOME}") {
-                            sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
-                        }
+                    // Використовуємо vm-pub-key для передачі публічного ключа в Terraform
+                    withCredentials([string(credentialsId: 'vm-pub-key', variable: 'PUBLIC_KEY')]) {
+                        sh "terraform apply -auto-approve -var='ssh_public_key=${PUBLIC_KEY}'"
                     }
                 }
-                stage('Configure Monitor Node') {
-                    steps {
-                        dir("${TF_HOME}") {
-                            sh "ansible-playbook -i inventory.ini ${ANSIBLE_HOME}/playbook_monitor.yml"
-                        }
+            }
+        }
+
+        stage('3. Dynamic Inventory') {
+            steps {
+                sh "ls -l ${ANSIBLE_HOME}/inventory.ini"
+            }
+        }
+
+        stage('4. Configuration & Deployment') {
+            steps {
+                // Використовуємо lab7 для автентифікації Ansible через SSH Agent 
+                sshagent(['lab7']) {
+                    dir("${TF_HOME}") {
+                        // Очікування SS
+                        sh "ansible all -i ${ANSIBLE_HOME}/inventory.ini -m wait_for_connection -a 'timeout=300'"
+                        
+                        // Паралельне розгортання
+                        parallel(
+                            "App Node": {
+                                sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_app.yml"
+                            },
+                            "Monitor Node": {
+                                sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_monitor.yml"
+                            }
+                        )
                     }
                 }
             }
@@ -66,7 +57,6 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     script {
-                        // Перевірка доступності веб-інтерфейсів через curl [cite: 37]
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
 
@@ -82,19 +72,11 @@ pipeline {
     post {
         always {
             dir("${TF_HOME}") {
-                script {
-                    if (fileExists("id_rsa.pub")) {
-                        def pubKey = readFile("id_rsa.pub").trim()
-                        sh "terraform destroy -auto-approve -var='ssh_public_key=${pubKey}'"
-                    } else {
-                        sh 'terraform destroy -auto-approve -var="ssh_public_key=dummy"' 
-                    }
+                withCredentials([string(credentialsId: 'vm-pub-key', variable: 'PUBLIC_KEY')]) {
+                    sh "terraform destroy -auto-approve -var='ssh_public_key=${PUBLIC_KEY}'"
                 }
             }
             echo 'Пайплайн завершено.'
-        }
-        failure {
-            echo 'Розгортання не вдалося. Перевірте конфігурацію IaC або сценарії Ansible.'
         }
     }
 }
