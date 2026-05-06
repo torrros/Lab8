@@ -18,7 +18,7 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     sh 'terraform init'
-                    // Створення інфраструктури [cite: 34, 56]
+                    // Створення інфраструктури без ручного втручання [cite: 34, 56]
                     sh 'terraform apply -auto-approve'
                 }
             }
@@ -27,26 +27,28 @@ pipeline {
         stage('3. Dynamic Inventory') {
             steps {
                 dir("${TF_HOME}") {
-                    // Генерація inventory.ini на основі виводу Terraform [cite: 25, 35]
-                    // Ми використовуємо local_file, який ви вже описали в main.tf, 
-                    // тому просто переконуємося, що файл створено.
+                    // Перевірка генерації inventory.ini [cite: 25, 35]
                     sh 'ls -l ../ansible/inventory.ini'
                 }
             }
         }
 
         stage('4. Ansible Deployment') {
-            parallel {
-		stage ('App Node'){
-                    steps {                        
-                        sh 'ansible-playbook -i ansible/inventory.ini ansible/playbook_app.yml'
-                    }
-		}
-                stage ('Monitor Node') {
-		    steps {	
-                        sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
-                    }
-                )
+            steps {
+                dir("${ANSIBLE_HOME}") {
+                    // КРИТИЧНО: Очікування SSH перед конфігурацією 
+                    sh 'ansible all -i inventory.ini -m wait_for_connection -a "timeout=300"'
+                    
+                    // Паралельний запуск конфігурації обох вузлів 
+                    parallel(
+                        "App Node": {
+                            sh 'ansible-playbook -i inventory.ini playbook_app.yml'
+                        },
+                        "Monitor Node": {
+                            sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
+                        }
+                    )
+                }
             }
         }
 
@@ -54,11 +56,11 @@ pipeline {
             steps {
                 dir("${TF_HOME}") {
                     script {
-                        // Отримуємо IP з terraform outputs для тестів 
+                        // Отримання IP через outputs для перевірки доступності [cite: 25, 37]
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
-                        
-                        // Перевірка доступності веб-інтерфейсів 
+
+                        // Перевірка веб-інтерфейсів (порт 80, 9090, 3000) [cite: 23, 24, 37]
                         sh "curl -s --head http://${appIp}:80 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:9090 | grep '200 OK'"
                         sh "curl -s --head http://${monitorIp}:3000 | grep '200 OK'"
@@ -70,11 +72,10 @@ pipeline {
 
     post {
         always {
-            // Опційно: terraform destroy для економії ресурсів 
             echo 'Пайплайн завершено.'
         }
         failure {
-            echo 'Помилка при виконанні пайплайну. Перевірте логи.'
+            echo 'Помилка розгортання. Перевірте логі Terraform або Ansible.'
         }
     }
 }
