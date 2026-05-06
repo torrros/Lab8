@@ -12,8 +12,8 @@
 
     - name: Setup Prometheus Configuration
       template:
-        src: templates/prometheus.yml
-        dest: /etc/prometheus/prometheus.yml
+        src: templates/prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml.j2
 
     - name: Deploy Prometheus
       docker_container:
@@ -22,7 +22,7 @@
         state: started
         restart_policy: always
         volumes:
-          - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+          - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.j2
         ports:
           - "9090:9090"
 

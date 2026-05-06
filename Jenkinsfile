@@ -36,23 +36,19 @@ pipeline {
         }
 
         stage('4. Ansible Deployment') {
-            steps {
-                dir("${ANSIBLE_HOME}") {
-                    // Очікування доступності SSH перед конфігурацією 
-                    sh 'ansible all -i inventory.ini -m wait_for_connection -a "timeout=300"'
-                    
-                    // Паралельний запуск конфігурації серверів 
-                    parallel(
-                        "App Node": {
-                            sh 'ansible-playbook -i inventory.ini playbook_app.yml'
-                        },
-                        "Monitor Node": {
-                            sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
-                        }
-                    )
-                }
-            }
-        }
+            parallel {
+		stage ('App Node'){
+                    steps {                        
+                        sh 'ansible-playbook -i ansible/inventory.ini ansible/playbook_app.yml'
+                    }
+		}
+                stage ('Monitor Node'} {
+		    steps {	
+                        sh 'ansible-playbook -i inventory.ini playbook_monitor.yml'
+                    }
+                )
+             }
+         }
 
         stage('5. Smoke Test') {
             steps {
