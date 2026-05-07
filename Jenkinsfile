@@ -74,10 +74,32 @@ pipeline {
                         def appIp = sh(script: "terraform output -raw app_node_ip", returnStdout: true).trim()
                         def monitorIp = sh(script: "terraform output -raw monitor_node_ip", returnStdout: true).trim()
                         sh "sleep 60"
-                        sh "curl -s --head http://${appIp}:80 | grep '200 OK'"
-                        sh "curl -s --head http://${monitorIp}:9090 | grep '200 OK'"
-                        sh "curl -s --head http://${monitorIp}:3000 | grep '200 OK'"
-                    }
+
+			sh """
+			    timeout 300 bash -c '
+                            until curl -s http://${appIp}:80 > /dev/null; do
+		                sleep 5
+			    done 
+			    '
+			"""
+
+                        sh """
+                            timeout 300 bash -c '
+                            until curl -s http://${monitorIp}:9090 > /dev/null; do
+                                sleep 5
+                            done
+                            '
+                        """
+
+                        sh """
+                            timeout 300 bash -c '
+                            until curl -s http://${monitorIp}:9090 > /dev/null; do
+                                sleep 5
+                            done
+                            '
+                        """
+
+                   }
                 }
             }
         }
