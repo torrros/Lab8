@@ -22,7 +22,7 @@
 
     - name: Copy Grafana Provisioning files
       copy:
-        src: "./files/grafana/{{ item.src }}"
+        src: "{{ playbook_dir }}/files/grafana/{{ item.src }}"
         dest: "{{ item.dest }}"
       loop:
         - { src: 'datasource.yml', dest: '/etc/grafana/provisioning/datasources/' }
