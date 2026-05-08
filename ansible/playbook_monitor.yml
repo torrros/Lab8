@@ -22,12 +22,12 @@
 
     - name: Copy Grafana Provisioning files
       copy:
-        src: "{{ playbook_dir }}/files/grafana/{{ item.src }}"
+        src: "{{ playbook_dir }}/ansible/files/{{ item.src }}"
         dest: "{{ item.dest }}"
       loop:
         - { src: 'datasource.yml', dest: '/etc/grafana/provisioning/datasources/' }
-        - { src: 'dashboards.yml', dest: '/etc/grafana/provisioning/dashboards/' }
-        - { src: 'dashboards/node-exporter.json', dest: '/var/lib/grafana/dashboards/' }
+        - { src: 'grafana/dashboards.yml', dest: '/etc/grafana/provisioning/dashboards/' }
+        - { src: 'grafana/dashboards/node-exporter.json', dest: '/var/lib/grafana/dashboards/' }
 
     - name: Deploy Prometheus
       docker_container:

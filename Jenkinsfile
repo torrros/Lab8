@@ -58,8 +58,8 @@ pipeline {
                 stage('Configure Monitor Node') {
                     steps {
                         sshagent(['lab7']) {
-                            dir("${TF_HOME}") {
-                                sh "ansible-playbook -i ${ANSIBLE_HOME}/inventory.ini ${ANSIBLE_HOME}/playbook_monitor.yml"
+                            dir("${ANSIBLE_HOME}") {
+                                sh "ansible-playbook -i inventory.ini playbook_monitor.yml"
                             }
                         }
                     }
@@ -93,7 +93,7 @@ pipeline {
 
                         sh """
                             timeout 300 bash -c '
-                            until curl -s http://${monitorIp}:9090 > /dev/null; do
+                            until curl -s http://${monitorIp}:3000 > /dev/null; do
                                 sleep 5
                             done
                             '
