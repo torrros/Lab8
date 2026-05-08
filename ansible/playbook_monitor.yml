@@ -5,15 +5,29 @@
   roles:
     - docker
   tasks:
-    - name: Create Prometheus config directory
+    - name: Create Config directories
       file:
-        path: /etc/prometheus
+        path: "{{ item }}"
         state: directory
+      loop:
+        - /etc/prometheus
+        - /etc/grafana/provisioning/datasources
+        - /etc/grafana/provisioning/dashboards
+        - /var/lib/grafana/dashboards
 
     - name: Setup Prometheus Configuration
       template:
         src: templates/prometheus.yml.j2
-        dest: /etc/prometheus/prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+
+    - name: Copy Grafana Provisioning files
+      copy:
+        src: "files/grafana/{{ item.src }}"
+        dest: "{{ item.dest }}"
+      loop:
+        - { src: 'datasource.yml', dest: '/etc/grafana/provisioning/datasources/' }
+        - { src: 'dashboards.yml', dest: '/etc/grafana/provisioning/dashboards/' }
+        - { src: 'dashboards/node-exporter.json', dest: '/var/lib/grafana/dashboards/' }
 
     - name: Deploy Prometheus
       docker_container:
@@ -22,7 +36,7 @@
         state: started
         restart_policy: always
         volumes:
-          - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.j2
+          - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
         ports:
           - "9090:9090"
 
@@ -32,5 +46,9 @@
         image: grafana/grafana:latest
         state: started
         restart_policy: always
+        user: "0" # Щоб уникнути проблем з правами на папки
+        volumes:
+          - /etc/grafana/provisioning:/etc/grafana/provisioning
+          - /var/lib/grafana/dashboards:/var/lib/grafana/dashboards
         ports:
           - "3000:3000"
