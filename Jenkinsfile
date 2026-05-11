@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('1. Checkout') {
             steps {
-                checkout scm // [cite: 33]
+                checkout scm
             }
         }
 
@@ -27,7 +27,6 @@ pipeline {
 
         stage('3. Dynamic Inventory') {
             steps {
-                // Перевірка генерації inventory.ini [cite: 35]
                 sh "ls -l ${ANSIBLE_HOME}/inventory.ini"
             }
         }
@@ -36,7 +35,6 @@ pipeline {
             steps {
                 sshagent(['lab7']) {
                     dir("${TF_HOME}") {
-                        // Очікування доступності вузлів перед конфігурацією 
                         sh "ansible all -i ${ANSIBLE_HOME}/inventory.ini -m wait_for_connection -a 'timeout=300'"
                     }
                 }
@@ -44,7 +42,6 @@ pipeline {
         }
 
         stage('5. Ansible Deployment') {
-            // Паралельний запуск конфігурації обох серверів 
             parallel {
                 stage('Configure App Node') {
                     steps {
