@@ -7,6 +7,12 @@ terraform {
   }
 }
 
+terraform {
+  backend "local" {
+    path = "/var/lib/jenkins/states/lab8.tfstate"
+  }
+}
+
 variable "ssh_public_key" {
   type        = string
   description = "Вміст публічного SSH ключа"
