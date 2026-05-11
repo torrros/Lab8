@@ -29,12 +29,18 @@
         - { src: 'grafana/dashboards.yml', dest: '/etc/grafana/provisioning/dashboards/' }
         - { src: 'grafana/dashboards/node-exporter.json', dest: '/var/lib/grafana/dashboards/' }
 
+    - name: Create Docker network
+      docker_network:
+        name: monitoring_network
+
     - name: Deploy Prometheus
       docker_container:
         name: prometheus
         image: prom/prometheus:latest
         state: started
         restart_policy: always
+        networks:
+          - name: monitoring_network
         volumes:
           - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
         ports:
@@ -47,6 +53,8 @@
         state: started
         restart_policy: always
         user: "0" # Щоб уникнути проблем з правами на папки
+        networks:
+          - name: monitoring_network
         volumes:
           - /etc/grafana/provisioning:/etc/grafana/provisioning
           - /var/lib/grafana/dashboards:/var/lib/grafana/dashboards
